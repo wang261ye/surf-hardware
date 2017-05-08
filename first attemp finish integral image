@@ -1,0 +1,415 @@
+//this part is the main part
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2017/05/05 14:30:40
+// Design Name: 
+// Module Name: surf_top
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+//surf_top surf_top_tb(clk,bReset,AddrRegRow,AddrRegCol,bWE,bCE,dWriteReg,dReadReg,OPENABLE,OPMODE,datain,dataout);
+//reg clk,reset;
+//    reg [8:0] AddrRegRow;
+//    reg [8:0] AddrRegCol;
+//    reg bWE,bCE;
+//    reg [16:0] datain;
+//    wire [16:0] dataout;
+//    reg [4:0] choose;
+//    reg [4:0] dReadReg;
+//    reg [4:0] dWriteReg;
+////    reg reset;
+//    reg OPENABLE;
+//    reg [4:0] OPMODE;
+`define CAL_INTEGRAL  4'b0001
+`define HESSIAN_NINE  4'b0010
+`define HESSIAN_FIFTEEN  4'b0011
+`define HESSIAN_TWENTY_ONE  3'b0100
+`define dRegX  4'b0000
+`define dRegOutX  4'b0001
+module surf_top(clk,reset,AddrRegRow,AddrRegCol,bWE,bCE,dWriteReg,dReadReg,OPENABLE,OPMODE,CalRow,CalCol,datain,dataout
+    );
+    input wire clk;
+    input wire reset;
+    input wire [8:0] AddrRegRow;
+    input wire [8:0] AddrRegCol;
+    input wire bWE,bCE;
+    input wire [4:0] dReadReg;
+    input wire [4:0] dWriteReg;
+    input wire OPENABLE;
+    input wire [1:0] CalRow;
+    input wire [1:0] CalCol;
+    input wire [4:0] OPMODE;
+    input wire [16:0] datain;
+    output reg [16:0] dataout;
+    
+    reg [16:0] reg_X[0:3];
+    reg [16:0] cal_int_data;
+    always @ (posedge clk or negedge reset)
+    begin
+        if(reset == 1'b0)
+        begin
+            //dataout = 16'b0000_0000_0000_0000;
+            reg_X[0] <= 16'b0;
+            reg_X[1] <= 16'b0;
+            reg_X[2] <= 16'b0;
+            reg_X[3] <= 16'b0;
+        end
+        else if((bCE == 1'b1) && (bWE == 1'b0))
+        begin
+            if(OPMODE == `CAL_INTEGRAL)
+            begin
+                reg_X[CalRow * 2 + CalCol] <= datain;
+                //reg_X[CalRow * 2 + CalCol] <= 16'b0000_0000_0000_0000;
+            end
+//            if(OPMODE == `CAL_INTEGRAL) begin
+//                reg_X[2 * CalRow + CalCol] = datain;
+//            end
+        end
+        else if((bCE == 1'b1) && (bWE == 1'b1))
+        begin
+            if(OPMODE == `CAL_INTEGRAL)
+            begin
+                dataout <= cal_int_data;
+            end
+        end
+        else
+        begin
+            if(OPENABLE == 1'b1)
+            begin
+                if(OPMODE == `CAL_INTEGRAL)
+                begin
+                    cal_int_data <= reg_X[3] + reg_X[2] + reg_X[1] - reg_X[0];
+                end
+            end
+        end
+    end
+    
+//    always @ (posedge clk or negedge reset)
+//    begin
+//        if(reset == 0)
+//        begin
+//        //dataout = 16'b0;
+//            reg_X[0] = 16'b0;
+//            reg_X[1] = 16'b0;
+//            reg_X[2] = 16'b0;
+//            reg_X[3] = 16'b0;
+//        end
+//        else begin
+//            if(OPMODE == `CAL_INTEGRAL)//4'b0001)//if(OPMODE == `CAL_INTEGRAL) 
+//            begin
+//                dataout = cal_int_data;
+//            end
+//        end
+//    end
+endmodule
+
+//next file is to finish the simulationg part.
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2017/05/05 14:30:07
+// Design Name: 
+// Module Name: tb
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+`define CAL_INTEGRAL  4'b0001
+`define HESSIAN_NINE  4'b0010
+`define HESSIAN_FIFTEEN  4'b0011
+`define HESSIAN_TWENTY_ONE  3'b0100
+`define dRegX  4'b0000
+`define dRegOutX  4'b0001
+`define NULL 0
+module tb(
+
+    );
+    reg clk,reset;
+    reg [8:0] AddrRegRow;
+    reg [8:0] AddrRegCol;
+    reg bWE,bCE;
+    reg [16:0] datain;
+    wire [16:0] dataout;
+    reg [4:0] choose;
+    reg [4:0] dReadReg;
+    reg [4:0] dWriteReg;
+//    reg reset;
+    reg OPENABLE;
+    reg [4:0] OPMODE;
+    reg [1:0] CalRow;
+    reg [1:0] CalCol;
+    surf_top surf_top_tb(clk,reset,AddrRegRow,AddrRegCol,bWE,bCE,dWriteReg,dReadReg,OPENABLE,OPMODE,CalRow,CalCol,datain,dataout);
+    
+    reg [16:0] Xdata[0:40000];
+    reg [16:0] int_data[0:40000];
+    reg [16:0] X9data[0:40000];
+    reg [16:0] X15data[0:40000];
+    reg [16:0] X21data[0:40000];
+    
+    integer i,j,k,l;
+//    integer c,r;
+    integer 			fileI, fileO, c, r, fileX;
+    	reg		[7:0]		FILE_HEADER[0:54-1];
+    parameter dWidth = 200;
+    parameter dHeight = 200;
+    
+    //this module is used to load data into Xdata.
+    initial
+    begin
+        fileI = $fopen("E:/vivado/surf1/kodim22_200.bmp","rb");
+            if (fileI == `NULL) $display("> FAIL: The file is not exist !!!\n");
+            else               $display("> SUCCESS : The file was read successfully.\n");
+            
+                  r = $fread(FILE_HEADER, fileI, 0, 54); 
+                  $display("$fread read %0d bytes: \n", r);
+            for(i=0; i<200; i=i+1)
+            begin
+                for(j=0; j<200; j=j+1)
+                begin    
+                    c = $fgetc(fileI);
+                    c = $fgetc(fileI);
+                    Xdata[(200-i-1)*200+j] = $fgetc(fileI);
+                end
+            end
+       
+        /*for(i = 0;i < 200;i = i + 1)
+        begin
+            for(j = 0;j < 200;j = j + 1)
+            begin
+                
+                Xdata[i * 200 + j] = 16'b0000_0000_0000_0001;
+            end
+        end*/
+    end
+    
+    //this module is used to initial all the data, .
+    initial
+    begin
+        //$monitor("%x",int_data[0]);
+        $display("this is for test");
+        OPENABLE = 1'b0;            //not operate
+        bWE = 1'b0;                 //not write
+        bCE = 1'b0;                 //disable work
+        #20 reset = 1'b0;               //reset all
+        #20 reset = 1'b1;
+		  clk = 1'b0;
+		  AddrRegRow = 0;
+		  AddrRegCol = 0;
+		  dWriteReg = 0;
+		  dReadReg = 0;
+//    surf_top surf_top_tb(clk,reset,AddrRegRow,AddrRegCol,bWE,bCE,dWriteReg,dReadReg,OPENABLE,OPMODE,CalRow,CalCol,datain,dataout);
+    
+
+        for(i = 0;i < 40000; i = i + 1)
+        begin
+            int_data[i] = Xdata[i];
+        end
+        $monitor("%b,%b",Xdata[0],int_data[0]);
+        $monitor("%b,%b",Xdata[1],int_data[1]);
+        //int_data = Xdata;           //calculate the integral image
+    end
+    
+    //clock working.
+    always
+    begin
+        #10;
+        clk = !clk;
+    end
+    //this module is to get the main function working.
+    initial
+    begin
+        
+        #100;
+        dWriteReg = `dRegX;
+        dReadReg = `dRegOutX;
+        OPMODE = `CAL_INTEGRAL;
+        OPENABLE = 1'b1;
+        //dataout = 16'b0000_0000_0000_1100;
+        $monitor("dataout is %h",dataout);
+        
+        //$monitor ("%b",datain);
+        for(i = 0;i < 200;i = i + 1)
+        begin
+            for(j = 0;j < 200;j = j + 1)
+            begin
+                bWE = 1'b0;             //write mode open
+                bCE = 1'b0;             //disable work
+//                for(k = -4;k <= 4;k = k + 1)
+//                begin
+//                    for(l = -4; l <= 4; l = l + 1)
+//                    begin
+//                        bCE = 1'b0;
+//                        AddrRegRow = k + 2;
+//                        AddrRegCol = l + 2;
+//                        datain = Xdata[dWidth * (i + k) + (j + l)];
+//                        #20 bCE = 1'b1;
+//                        #20 bCE = 1'b0;
+//                        #20;
+//                    end
+//                end
+                if(i == 0)
+                begin
+                    if(j == 0)
+                    begin
+                        bCE = 1'b0;
+                        CalRow = 0;
+                        CalCol = 0;
+                        datain = 0;
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        CalRow = 0;
+                        CalCol = 1;
+                        datain = 0;
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        CalRow = 1;
+                        CalCol = 0;
+                        datain = 0;
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        CalRow = 1;
+                        CalCol = 1;
+                        datain = int_data[j];
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        #20;
+                    end
+                    else begin
+                        bCE = 1'b0;
+                        CalRow = 0;
+                        CalCol = 0;
+                        datain = 0;
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        CalRow = 0;
+                        CalCol = 1;
+                        datain = 0;
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        CalRow = 1;
+                        CalCol = 0;
+                        datain = int_data[j - 1];
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        CalRow = 1;
+                        CalCol = 1;
+                        datain = int_data[j];
+                        #20 bCE = 1'b1;
+                        #20 bCE = 1'b0;
+                        #20;
+                    end
+                end
+                else if(j == 0)
+                begin
+                    #20 bCE = 1'b0;
+                    CalRow = 0;
+                    CalCol = 0;
+                    datain = 0;
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    CalRow = 0;
+                    CalCol = 1;
+                    datain = int_data[(i - 1) * dWidth];
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    CalRow = 1;
+                    CalCol = 0;
+                    datain = 0;
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    CalRow = 1;
+                    CalCol = 1;
+                    datain = int_data[i * dWidth];;
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    #20;
+                end
+                else begin
+                    #20 bCE = 1'b0;
+                    CalRow = 0;
+                    CalCol = 0;
+                    datain = int_data[(i - 1) * dWidth + j - 1];
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    CalRow = 0;
+                    CalCol = 1;
+                    datain = int_data[(i-1) * dWidth + j];
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    CalRow = 1;
+                    CalCol = 0;
+                    datain = int_data[i * dWidth + j - 1];
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    CalRow = 1;
+                    CalCol = 1;
+                    datain = int_data[i * dWidth + j];
+                    #20 bCE = 1'b1;
+                    #20 bCE = 1'b0;
+                    #20;
+                end
+//                    for(k = -1;k < 1;k = k + 1)
+//                    begin
+//                        for(l = -1;l < 1;l = l + 1)
+//                        begin
+//                            CalRow = k + 1;
+//                            CalCol = l + 1;
+//                            datain = int_data[
+//                        end
+//                    end
+//                end
+//                for(k = -1;k < 1;k = k + 1)
+//                begin
+//                    for(l = -1;l < 1;l = l + 1)
+//                    begin
+                        
+//                    end
+//                end
+                #20 OPENABLE = 1'b0;
+                #100 OPENABLE = 1'b1;
+                OPMODE = `CAL_INTEGRAL;
+                bWE = 1'b1;             //read mode open
+                bCE = 1'b0;
+                #20 bCE = 1'b1;         //enable work
+                #20 int_data[i * dWidth + j] = dataout;
+               
+                #20 bCE = 1'b0;
+                #20;
+//                $display("ti\n");
+            end
+        end
+        
+        $display("tishids\n");
+        fileO = $fopen("E:/vivado/surf1/test.txt","wb");
+        for(i = 0;i < 40000; i = i + 1)
+        begin
+            //$fdisplay("%c",int_data[i]);
+            //$monitor("%x",int_data[i]);
+            $fwrite(fileO,"%x",int_data[i]);
+        end
+        $finish;
+    end
+endmodule
